@@ -175,7 +175,7 @@ String pickRandomImage() {
   final boardName = boredLink.split(".com/")[1];
   print(boardName);
 
-  // url = boardName + "/feed.rss"
+  // url = boardName+"/feed.rss"
   final link =
       "https://www.pinterest.com/resource/BoardFeedResource/get/?source_url=$boardName&data={%22options%22:{%22board_id%22:%22$boardName%22,%22page_size%22:$numberOfImages,%22field_set_key%22:%22unauth_react%22,%22sort%22:%22default%22,%22layout%22:%22default%22},%22context%22:{}}";
 
