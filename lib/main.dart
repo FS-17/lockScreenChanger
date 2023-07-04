@@ -4,10 +4,11 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
-import 'package:win32/win32.dart';
+// import 'package:path_provider/path_provider.dart';
+// import 'package:win32/win32.dart';
 import 'dart:math';
 import 'myclass.dart';
+// import 'package:path_provider/path_provider.dart';
 
 void main() {
   runApp(
@@ -19,13 +20,21 @@ void main() {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   MyApp({Key? key, required this.title}) : super(key: key);
 
-  String imageurl =
-      'https://i.pinimg.com/564x/34/db/80/34db803a43771add5707601d655193b5.jpg';
-
   final String title;
+
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  var _ImageBG =
+      Image.file(File('${getUserPath()}\\LockScreenImage\\img.jpg')).image;
+
+  // final String title;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -44,11 +53,8 @@ class MyApp extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.black,
           image: DecorationImage(
-            image: NetworkImage(imageurl),
-            opacity: 0.8,
-
+            image: _ImageBG,
             fit: BoxFit.cover,
-            // fade top to bottom
           ),
         ),
         child: Center(
@@ -83,24 +89,23 @@ class MyApp extends StatelessWidget {
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         )),
-                    onPressed: () {
-                      String newimageUrl = changeLockScreenWallpaper();
+                    onPressed: () async {
+                      String newimageUrl = await changeLockScreenWallpaper();
+                      File file = File("./assets/setting.json");
 
-                      if (newimageUrl == "setting.json not found") {
-                        // ask user to send bored link
-                        // if user send link, save it to file
-                        print("no link");
-                      } else {
-                        // change app background image to new image
-                        // setState(() {
-                        //   imageUrl = newimageUrl;
-                        // });
-                      }
+                      var setting = jsonDecode(file.readAsStringSync());
+                      setting["lastImage"] = newimageUrl;
+                      setting["lastChange"] = DateTime.now().toString();
 
-                      // balck fade effect
+                      file.writeAsStringSync(jsonEncode(setting));
 
                       // change app background image to new image
-                      // setState(() {});
+                      setState(() {
+                        _ImageBG = Image.file(File(
+                                '${getUserPath()}\\LockScreenImage\\img.jpg'))
+                            .image;
+                      });
+                      // view the image
                     },
                   ),
                   const SizedBox(width: 15),
@@ -134,54 +139,83 @@ class MyApp extends StatelessWidget {
 }
 
 @override
-String changeLockScreenWallpaper() {
-  print("pressed");
-  String imageUrl =
-      "https://i.pinimg.com/474x/df/e3/fe/dfe3fe146fc0d995c06e07e70520bc03.jpg";
+Future<String> changeLockScreenWallpaper() async {
+  // run this function getImagesUrl() to get list of images url and store it in a list
+  List<String?> imagesUrls = await getImagesUrl();
 
-  String image = pickRandomImage();
-  return image;
-//   // get path to C:\Users\faisa\Documents\lockscreen
-//   final home = Directory(Platform.environment['USERPROFILE']!).path +
-//  '\\LockScreenImage';
-//   print(home);
+  // get random image url from the list
+  String imageUrl = imagesUrls[Random().nextInt(imagesUrls.length)]!;
+  var headers = {
+    'authority': 'i.pinimg.com',
+    'accept':
+        'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'accept-language': 'en-US,en;q=0.9,ar;q=0.8',
+    'cache-control': 'max-age=0',
+    'if-none-match': '"5650a1c0a8316486f4c65e798b260569"',
+    'sec-ch-ua':
+        '"Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+    'sec-fetch-dest': 'document',
+    'sec-fetch-mode': 'navigate',
+    'sec-fetch-site': 'none',
+    'sec-fetch-user': '?1',
+    'upgrade-insecure-requests': '1',
+    'user-agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+  };
 
-//   // get all files in the directory
-//   final files = await Directory(home).list().toList();
-//   for (var file in files) {
-//     print(file);
-//   }
+  print("image url: $imageUrl");
+  // String imgExt = imageUrl.split('.').last;
+
+  // download the image
+  final response = await http.get(Uri.parse(imageUrl), headers: headers);
+  final bytes = response.bodyBytes;
+
+  // save the image to a file to user path using path_provider package
+  // %USERPROFILE%\lockscreen\img.jpg
+
+  String userpath = getUserPath();
+
+  final file = File('${userpath}\\LockScreenImage\\img.jpg');
+  await file.writeAsBytes(bytes);
+
+  return imageUrl;
 }
 
-String pickRandomImage() {
+Future<List<String?>> getImagesUrl() async {
   // check if there is file called "./assets/setting.json"
   // if not ask user to send a bored link
   // if yes read the file and get the bored link
   final file = File("./assets/setting.json");
   if (!file.existsSync()) {
-    // ask user to send bored link
-    // if user send link, save it to file
-    return "setting.json not found";
+    makeSettingFile();
   }
 
   // setting.json = {"boardLink":"https://www.pinterest.com/***/**","imageNum":70.0,"imageSize":[2232, 1014],"changeTime":38.767605633802816}
   // get bored link
   // get number of images
-  final boredLink = jsonDecode(file.readAsStringSync())["boardLink"];
+  final boardLink = jsonDecode(file.readAsStringSync())["boardLink"];
   final numberOfImages = jsonDecode(file.readAsStringSync())["imageNum"];
   final imageSize = jsonDecode(file.readAsStringSync())["imageSize"];
+  final boardid = jsonDecode(file.readAsStringSync())["board_id"];
+
   // board name = foraiandml/lockscreen
-  // from .com/ to the end
-  final boardName = boredLink.split(".com/")[1];
-  print(boardName);
+  final boardName = boardLink.split(".com/")[1];
 
-  // url = boardName+"/feed.rss"
   final link =
-      "https://www.pinterest.com/resource/BoardFeedResource/get/?source_url=$boardName&data={%22options%22:{%22board_id%22:%22$boardName%22,%22page_size%22:$numberOfImages,%22field_set_key%22:%22unauth_react%22,%22sort%22:%22default%22,%22layout%22:%22default%22},%22context%22:{}}";
+      "https://www.pinterest.com/resource/BoardFeedResource/get/?source_url=$boardName&data={%22options%22:{%22board_id%22:%22$boardid%22,%22page_size%22:$numberOfImages,%22field_set_key%22:%22unauth_react%22,%22sort%22:%22default%22,%22layout%22:%22default%22},%22context%22:%7B%7D%7D";
 
-  print(link);
+  // print(link);
 
   // get http response
-  final response = http.get(Uri.parse(link));
-  return "https://i.pinimg.com/474x/df/e3/fe/dfe3fe146fc0d995c06e07e70520bc03.jpg";
+  final response = await http.get(Uri.parse(link));
+
+  // get image urls start with "https://i.pinimg.com/originals/" end before '"'
+  final imageUrls = RegExp(r'https://i.pinimg.com/originals/.*?(?=")')
+      .allMatches(response.body)
+      .map((match) => match.group(0))
+      .toList();
+
+  return imageUrls;
 }

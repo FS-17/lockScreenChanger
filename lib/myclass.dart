@@ -12,7 +12,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/services.dart';
 
 // button widget
-class MyElevatedButton extends StatelessWidget {
+class MyElevatedButton extends StatefulWidget {
   final BorderRadiusGeometry? borderRadius;
   final double? width;
   final double height;
@@ -20,7 +20,7 @@ class MyElevatedButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget child;
 
-  const MyElevatedButton({
+  MyElevatedButton({
     Key? key,
     required this.onPressed,
     required this.child,
@@ -31,8 +31,37 @@ class MyElevatedButton extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  _MyElevatedButtonState createState() => _MyElevatedButtonState();
+}
+
+class _MyElevatedButtonState extends State<MyElevatedButton> {
+  @override
+  // final BorderRadiusGeometry? borderRadius;
+  // final double? width;
+  // final double height;
+  // final Gradient gradient;
+  // final VoidCallback? onPressed;
+  // final Widget child;
+
+  // _MyElevatedButtonState({
+  //   Key? key,
+  //   required this.onPressed,
+  //   required this.child,
+  //   this.borderRadius,
+  //   this.width,
+  //   this.height = 44.0,
+  //   this.gradient = const LinearGradient(colors: [Colors.cyan, Colors.indigo]),
+  // }) : super(key: key);
+
+  @override
   Widget build(BuildContext context) {
-    final borderRadius = this.borderRadius ?? BorderRadius.circular(0);
+    final borderRadius = widget.borderRadius ?? BorderRadius.circular(0);
+    final width = widget.width ?? double.infinity;
+    final height = widget.height;
+    final gradient = widget.gradient;
+    final onPressed = widget.onPressed;
+    final child = widget.child;
+
     return Container(
       width: width,
       height: height,
@@ -144,17 +173,18 @@ bool _checkFileExists(String path) {
   return File(path).existsSync();
 }
 
+String getUserPath() {
+  Map<String, String> envVars = Platform.environment;
+  String userPath = envVars['USERPROFILE']!;
+  return userPath;
+}
+
 void showDataAlert(context) async {
   // check if there is setting.json file in assets
 
   if (!_checkFileExists("./assets/setting.json")) {
     // if not, create one
-    File file = File("./assets/setting.json");
-    file.createSync();
-
-    // and write the default setting
-    file.writeAsStringSync(
-        '{"boardLink":"https://www.pinterest.com/mosssaige/desktop-wallpaper-art/","imageNum":10,"imageSize": [1920, 1080],"changeTime":5}');
+    makeSettingFile();
   }
   File file = File("./assets/setting.json");
 
@@ -220,6 +250,9 @@ void showDataAlert(context) async {
                             ),
                           ),
                           initialValue: setting["boardLink"],
+                          style: const TextStyle(
+                            fontSize: 13,
+                          ),
                           onChanged: (value) {
                             setting["boardLink"] = value;
                           },
@@ -384,11 +417,12 @@ void showDataAlert(context) async {
           ),
           actions: [
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 print("the board link is ${setting["boardLink"]} ");
                 print("the image number is ${setting["imageNum"]} ");
                 print("the image size is ${setting["imageSize"]} ");
                 print("the change time is ${setting["changeTime"]} ");
+                print("recommended is ${setting["recommended"]} ");
 
                 if (setting["boardLink"] == "") {
                   setting["boardLink"] =
@@ -398,11 +432,16 @@ void showDataAlert(context) async {
                   setting["imageNum"] = 10;
                 }
 
-                // save setting
-                file.writeAsStringSync(
-                    '{"boardLink":"${setting["boardLink"]}","imageNum":${setting["imageNum"]},"imageSize":${setting["imageSize"]},"changeTime":${setting["changeTime"]}}');
-
                 Navigator.pop(context);
+
+                // Get board id
+                var response = await http.get(Uri.parse(setting["boardLink"]));
+                var html = response.body;
+                setting["board_id"] =
+                    html.split('board_id=')[1].split('\\"')[1];
+
+                // save setting
+                file.writeAsStringSync(jsonEncode(setting));
               },
               child: const Text(
                 "save",
@@ -467,4 +506,14 @@ Future<List<int>> getImageSize(String url) async {
   final bytes = await consolidateHttpClientResponseBytes(response);
   final image = await decodeImageFromList(bytes);
   return [image.width, image.height];
+}
+
+void makeSettingFile() {
+  // make setting.json file if it doesn't exist
+  File file = File("./assets/setting.json");
+  file.createSync();
+
+  // and write the default setting
+  file.writeAsStringSync(
+      '{"boardLink":"https://www.pinterest.com/mosssaige/desktop-wallpaper-art/","board_id":"51017476968205679","imageNum":10,"imageSize": [1920, 1080],"changeTime":5, "lastImage":"https://i.pinimg.com/originals/8f/29/ab/8f29ab1660348242aa17383322398e2a.jpg","lastChange":"2023-07-04 07:54:21.530205","recommended":false}');
 }
