@@ -40,6 +40,7 @@ dependencies:
   xen_popup_card: ^0.0.1
   glass: ^1.0.1+1
   image_size_getter: ^2.1.2
+  image: ^4.0.17
 
 dev_dependencies:
   flutter_test:
