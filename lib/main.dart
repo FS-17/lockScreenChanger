@@ -170,7 +170,7 @@ class _MyAppState extends State<MyApp> {
 
                           // change lock screen wallpaper
 
-                          File file = File("./assets/setting.json");
+                          File file = File("assets/setting.json");
 
                           var setting = jsonDecode(file.readAsStringSync());
                           setting["lastImage"] = newimageUrl;
@@ -220,7 +220,7 @@ class _MyAppState extends State<MyApp> {
 
 @override
 Future<String> changeLockScreenWallpaper() async {
-  final file = File("./assets/setting.json");
+  final file = File("assets/setting.json");
   if (!file.existsSync()) {
     makeSettingFile();
   }
@@ -233,7 +233,8 @@ Future<String> changeLockScreenWallpaper() async {
   imagesFile.writeAsStringSync(jsonEncode(imagesUrls));
 
   // get random image url from the list
-  String imageUrl = imagesUrls[Random().nextInt(imagesUrls.length)]!;
+  int randomnum = Random().nextInt(imagesUrls.length);
+  String imageUrltmp = imagesUrls[randomnum]!;
   var headers = {
     'authority': 'i.pinimg.com',
     'accept':
@@ -254,8 +255,29 @@ Future<String> changeLockScreenWallpaper() async {
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
   };
 
+  var imageSize = await getImageSize(imageUrltmp);
+  var wantedSize = setting["imageSize"];
+  var bestSize = 0;
+  String imageUrl = "imageUrltmp";
+  for (var i = 0; i < imagesUrls.length++; i++) {
+    if (i + randomnum >= imagesUrls.length) {
+      imageUrltmp = imagesUrls[(i + randomnum) - imagesUrls.length]!;
+    } else {
+      imageUrltmp = imagesUrls[i + randomnum]!;
+    }
+    imageSize = await getImageSize(imageUrltmp);
+    if (imageSize[0] >= wantedSize[0] && imageSize[1] >= wantedSize[1]) {
+      imageUrl = imageUrltmp;
+
+      break;
+    } else {
+      if (imageSize[1] > bestSize) {
+        bestSize = imageSize[1];
+        imageUrl = imageUrltmp;
+      }
+    }
+  }
   print("image url: $imageUrl");
-  // String imgExt = imageUrl.split('.').last;
 
   // download the image
   final response = await http.get(Uri.parse(imageUrl), headers: headers);

@@ -184,11 +184,11 @@ String getUserPath() {
 void showDataAlert(context) async {
   // check if there is setting.json file in assets
 
-  if (!_checkFileExists("./assets/setting.json")) {
+  if (!_checkFileExists("assets/setting.json")) {
     // if not, create one
     makeSettingFile();
   }
-  File file = File("./assets/setting.json");
+  File file = File("assets/setting.json");
 
   var setting = jsonDecode(file.readAsStringSync());
 
@@ -487,9 +487,9 @@ void showDataAlert(context) async {
 
                 Navigator.pop(context);
 
-                setting["recommended"] = jsonDecode(
-                    File("./assets/setting.json")
-                        .readAsStringSync())["recommended"];
+                setting["recommended"] =
+                    jsonDecode(File("assets/setting.json").readAsStringSync())[
+                        "recommended"];
 
                 // Get board id
                 var response = await http.get(Uri.parse(setting["boardLink"]));
@@ -524,9 +524,9 @@ class SwitchExample extends StatefulWidget {
 
 class _SwitchExampleState extends State<SwitchExample> {
   @override
-  File file = File("./assets/setting.json");
-  var light = jsonDecode(
-      File("./assets/setting.json").readAsStringSync())["recommended"];
+  File file = File("assets/setting.json");
+  var light =
+      jsonDecode(File("assets/setting.json").readAsStringSync())["recommended"];
   Widget build(BuildContext context) {
     return Switch(
       // This bool value toggles the switch.
@@ -612,7 +612,7 @@ Future<List<int>> getImageSize(String url) async {
 
 void makeSettingFile() {
   // make setting.json file if it doesn't exist
-  File file = File("./assets/setting.json");
+  File file = File("assets/setting.json");
   file.createSync();
 
   // and write the default setting
